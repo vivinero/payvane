@@ -58,34 +58,90 @@ exports.getPaymentById = async(req, res) => {
 }
 
 // Update payment status (for testing not for production)
-exports.updatePaymentStatus = async (req, res) =>{
+exports.updatePaymentStatus = async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+    if (!paymentId) {
+      return res.status(400).json({
+        message: "Payment ID is required",
+      });
+    }
+
+    const { status } = req.body;
+
+    const allowedStatuses = ["pending", "completed", "failed"];
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        message: "Invalid status value",
+      });
+    }
+
+    const updatedPayment = await paymentSchema.findByIdAndUpdate(
+      paymentId,
+      { status },
+      { new: true }
+    );
+
+    if (!updatedPayment) {
+      return res.status(404).json({
+        message: "Payment not found",
+      });
+    }
+
+    res.status(200).json({
+      message: "Payment status updated successfully",
+      payment: updatedPayment,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Server Error",
+      error: error.message,
+    });
+  }
+};
+
+
+// Get all payments
+exports.getAllPayment = async (req, res) => {
+  try {
+    const payments = await paymentSchema
+      .find()
+      .populate("userId", "fullName email");
+
+    res.status(200).json({
+      message: "Payments retrieved successfully",
+      count: payments.length,
+      payments,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Server Error",
+      error: error.message,
+    });
+  }
+};
+
+// Delete a payment
+exports.deletePayment = async (req, res) => {
     try {
-        const {paymentId} =req.params
+        const {paymentId} = req.params
         if(!paymentId){
             return res.status(400).json({
                 message: "Payment ID is required",
             })
         }
-
-        const status = req.body;
-        const allowedStatuses = ["pending", "completed", "failed"]
-        if (!allowedStatuses.includes(status)) {
-            return res.status(400).json({
-                message: "Invalid status value",
-            })
-        }
-        const updatePayment = await paymentSchema.findByIdAndUpdate(paymentId, {status}, {new: true})
-        if(!updatePayment){
+        const deletePayment = await paymentSchema.findByIdAndDelete(paymentId);
+        if(!deletePayment){
             return res.status(404).json({
                 message: "Payment not found"
             })
         }
-        res.status(200).json({
-            message: "Payment status updated successfully",
-            payment: updatePayment
-        })  
+        returnres.status(200).json({
+            message: "Payment deleted successfully",
+            payment: deletePayment
+        })
     } catch (error) {
-         res.status(500).json({
+        res.status(500).json({
             message: "Server Error",
             error: error.message,
         })
